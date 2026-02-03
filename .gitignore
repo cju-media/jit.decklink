@@ -1,0 +1,10 @@
+build/
+externals/
+.DS_Store
+*.o
+*.obj
+*.mxo
+*.mxe64
+*.mxe
+*.so
+*.dylib
