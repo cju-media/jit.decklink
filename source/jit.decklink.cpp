@@ -1,12 +1,16 @@
-#include "c74_min.h"
-#include "DeckLinkAPI.h"
-#include <vector>
-#include <string>
-#include <cstdlib>
 
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #endif
+
+#include "DeckLinkAPI.h"
+
+// Include Min-API after DeckLinkAPI to avoid conflicts with system headers/macros included by Max SDK
+#include "c74_min.h"
+
+#include <vector>
+#include <string>
+#include <cstdlib>
 
 using namespace c74::min;
 
@@ -213,7 +217,13 @@ private:
             void* buffer = nullptr;
             // Explicitly cast to base interface to ensure GetBytes is found
             // (fixes potential ambiguity or lookup issues in some SDK versions/platforms)
-            static_cast<IDeckLinkVideoFrame*>(frame)->GetBytes(&buffer);
+            // On some systems (macOS) we might need to query the interface or use standard access.
+            // If GetBytes is hidden, we can try to rely on inheritance.
+            // NOTE: If static_cast fails (compiler error), it means inheritance is ambiguous or virtual.
+            // On macOS, it's often an interface inheriting IUnknown.
+            // Let's try direct call first after include re-order.
+
+            frame->GetBytes(&buffer);
 
             auto* src = data;
             auto* dst = (uint8_t*)buffer;
