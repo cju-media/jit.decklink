@@ -12,6 +12,11 @@
 #include <string>
 #include <cstdlib>
 
+// Fix for potential macro conflict on macOS (e.g. from Carbon/QuickTime) hiding GetBytes
+#ifdef GetBytes
+#undef GetBytes
+#endif
+
 using namespace c74::min;
 
 class jit_decklink : public object<jit_decklink> {
