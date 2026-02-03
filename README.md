@@ -26,8 +26,15 @@ A Max/MSP Jitter external to send video matrices to Blackmagic Design DeckLink d
     *   Go to [Blackmagic Design Developer Support](https://www.blackmagicdesign.com/developer/).
     *   Download the **Desktop Video SDK**.
     *   Extract the SDK.
-    *   Copy the `DeckLinkAPI.h` (and other necessary headers if any, usually just one for the API definition, but platform specific headers might be needed) into the `include/` directory of this project.
-    *   **Mac/Linux**: You might need `DeckLinkAPIDispatch.cpp` from the SDK to be added to the source, or link against the framework. This project assumes you add the necessary implementation files or link against the libraries provided by the SDK.
+    *   Copy the following header files from the SDK (Mac/Linux/Windows specific folder) into the `include/` directory of this project:
+        *   `DeckLinkAPI.h`
+        *   `DeckLinkAPITypes.h`
+        *   `DeckLinkAPIModes.h`
+        *   `DeckLinkAPIDiscovery.h`
+        *   `DeckLinkAPIConfiguration.h`
+        *   `DeckLinkAPIDeckControl.h`
+        *   `DeckLinkAPIStreaming.h`
+    *   **Mac/Linux**: You also need to copy `DeckLinkAPIDispatch.cpp` into the `include/` directory (or source directory) to handle the API entry point.
     *   **Windows**: Link against `DeckLinkAPI.lib`.
 
 3.  **Build**:

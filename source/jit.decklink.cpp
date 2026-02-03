@@ -168,7 +168,13 @@ private:
             if (i == index) {
                 m_deck_link = deckLink;
                 // Query Output Interface
-                if (m_deck_link->QueryInterface(&IID_IDeckLinkOutput, (void**)&m_deck_link_output) != S_OK) {
+                // Mac uses CFPlugIn/CFUUIDBytes for IID, passed by value/ref
+                // Windows/Linux use standard COM IID*
+                #if defined(__APPLE__)
+                    if (m_deck_link->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deck_link_output) != S_OK) {
+                #else
+                    if (m_deck_link->QueryInterface(&IID_IDeckLinkOutput, (void**)&m_deck_link_output) != S_OK) {
+                #endif
                     cerr << "jit.decklink: Could not obtain IDeckLinkOutput interface." << endl;
                     m_deck_link->Release();
                     m_deck_link = nullptr;
@@ -205,7 +211,9 @@ private:
 
         if (m_deck_link_output->CreateVideoFrame(1920, 1080, rowBytes, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault, &frame) == S_OK) {
             void* buffer = nullptr;
-            frame->GetBytes(&buffer);
+            // Explicitly cast to base interface to ensure GetBytes is found
+            // (fixes potential ambiguity or lookup issues in some SDK versions/platforms)
+            static_cast<IDeckLinkVideoFrame*>(frame)->GetBytes(&buffer);
 
             auto* src = data;
             auto* dst = (uint8_t*)buffer;
