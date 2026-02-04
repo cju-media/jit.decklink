@@ -13,6 +13,11 @@
 // Include Min-API after DeckLinkAPI to avoid conflicts with system headers/macros included by Max SDK
 #include "c74_min.h"
 
+// Ensure GetBytes is NOT defined as a macro after Min-API includes system headers (Carbon/QuickTime)
+#ifdef GetBytes
+#undef GetBytes
+#endif
+
 #include <vector>
 #include <string>
 #include <cstdlib>
