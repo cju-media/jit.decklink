@@ -3,6 +3,11 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+// Ensure GetBytes is not a macro before including DeckLinkAPI
+#ifdef GetBytes
+#undef GetBytes
+#endif
+
 #include "DeckLinkAPI.h"
 
 // Include Min-API after DeckLinkAPI to avoid conflicts with system headers/macros included by Max SDK
