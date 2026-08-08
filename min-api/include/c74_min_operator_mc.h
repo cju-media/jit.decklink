@@ -79,7 +79,16 @@ class mc_operator : public mc_operator_base
     vector<std::pair<int, attribute_base*>> m_attributes_mapped_to_inlets;
 };
 
-template <class min_class_type, enable_if_mc_operator<min_class_type> = 0>
-void min_dsp64_attrmap(minwrap<min_class_type>* self, const short* count) {}
+// NOTE: There used to be a `min_dsp64_attrmap` overload here constrained on
+// `enable_if_mc_operator`. It was removed because any class that is both
+// mc-capable AND a vector_operator/sample_operator (the only way mc_operator
+// is actually usable, since mc_operator_base alone has no perform callback)
+// would make that overload and the vector_operator/sample_operator one
+// simultaneously viable, which is an ambiguous call and fails to compile.
+// The vector_operator/sample_operator overloads are no-ops anyway, so
+// dropping this one changes no behavior. See also: prefer inheriting from
+// `mc_operator_base` directly (not `mc_operator<>`) alongside
+// `vector_operator<>`/`sample_operator<>` to avoid an additional ambiguity
+// on the duplicate `samplerate()`/`vector_size()` members.
 
 } // namespace c74::min
