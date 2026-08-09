@@ -1100,7 +1100,10 @@ class jit_decklink_send_tilde : public object<jit_decklink_send_tilde>, public v
                  << "holding the output enabled at the driver level (quitting a patch doesn't call our cleanup "
                  << "code if Max itself crashed first). Try, in order: (1) fully quit Max (Cmd+Q, not just close "
                  << "the window) and reopen it; (2) check the Blackmagic Desktop Video Setup / Status utility for "
-                 << "a 'device busy' indicator; (3) restart the machine, which always clears it." << endl;
+                 << "a 'device busy' indicator; (3) power-cycle the DeckLink itself -- unplug and reconnect an "
+                 << "external unit (UltraStudio etc.), or toggle its power switch if it has one -- this releases "
+                 << "the driver's claim on the device without needing a full restart; (4) restart the machine, "
+                 << "which always clears it." << endl;
         }
         else {
             cerr << "EnableVideoOutput failed for '" << mode_name << "' (" << describe_hresult(enable_hr) << ")." << endl;
