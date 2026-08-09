@@ -11,9 +11,16 @@ UltraStudio 3G *Recorder*) is intended for later, not built yet.
 ## Features
 
 * **Device discovery**: `scan` enumerates connected DeckLink devices and
-  populates a connected `umenu` with their names.
+  populates a connected `umenu` with their names. Multi-port cards (DeckLink
+  Duo, Quad, 8K Pro, etc.) present each physical connector as its own entry
+  in this list, individually named (e.g. `DeckLink Quad 2 (1)`,
+  `DeckLink Quad 2 (2)`...) so each port can be told apart and selected on
+  its own.
 * **Device selection**: pick a device by index, either by wiring a `umenu`
   straight back into the left inlet, or with the `device` attribute/message.
+  To drive several outputs at once (multiple ports on one card, or multiple
+  cards), use multiple `jit.decklink.send~` instances, each pointed at a
+  different `device` index -- one instance drives exactly one output port.
 * **Video output**: send a `jit_matrix` (char, 3- or 4-plane) to the left
   inlet; it's converted to the DeckLink's active display mode and displayed.
 * **Configurable display mode**: `displaymode` selects the output timing
@@ -171,6 +178,14 @@ this yourself).
 
 ## Known limitations / possible future work
 
+* No profile/duplex-mode switching: some multi-port cards (DeckLink Duo 2,
+  Quad 2, 8K Pro) can be reconfigured between duplex modes that trade off
+  how many independent output sub-devices exist (e.g. 4 independent ports
+  vs. 2 paired for higher bandwidth), via `IDeckLinkProfileManager`. This
+  external doesn't touch that -- `scan` only shows whatever sub-devices the
+  profile currently active in Blackmagic's own Desktop Video Setup utility
+  happens to expose. Switch profiles there first if the port you want isn't
+  showing up.
 * Video is always output as 8-bit BGRA (`bmdFormat8BitBGRA`); there's no
   YUV/10-bit path yet.
 * Frames are pushed synchronously as they arrive (`DisplayVideoFrameSync`),
