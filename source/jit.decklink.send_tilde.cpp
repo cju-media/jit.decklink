@@ -190,38 +190,80 @@ std::string normalize_name(const std::string& in) {
     return out;
 }
 
-std::string get_model_name(IDeckLink* deck_link) {
+// Returns a name suitable for showing the user (scan's umenu list, console
+// messages). Deliberately uses IDeckLink::GetDisplayName(), not
+// GetModelName(): on multi-port cards (DeckLink Duo/Quad/8K Pro etc.),
+// each physical connector is its own IDeckLink instance from the
+// iterator, and GetModelName() returns the *same* string for all of them
+// (e.g. "DeckLink Quad 2" x4) -- indistinguishable in the scan list.
+// GetDisplayName() is Blackmagic's own per-connector-differentiated name
+// (e.g. "DeckLink Quad 2 (3)"), which is what actually lets a user pick
+// the right port. Falls back to GetModelName() if GetDisplayName() ever
+// comes back empty, so we still show something rather than nothing.
+std::string get_device_name(IDeckLink* deck_link) {
 #if defined(__APPLE__)
-    std::string result = "Unknown Device";
-    CFStringRef cf_name = nullptr;
-    if (deck_link->GetModelName(&cf_name) == S_OK && cf_name) {
+    auto cf_to_std = [](CFStringRef cf) -> std::string {
+        if (!cf)
+            return {};
         char buffer[256];
-        if (CFStringGetCString(cf_name, buffer, sizeof(buffer), kCFStringEncodingUTF8))
-            result = buffer;
-        CFRelease(cf_name);
+        if (CFStringGetCString(cf, buffer, sizeof(buffer), kCFStringEncodingUTF8))
+            return buffer;
+        return {};
+    };
+    std::string result;
+    CFStringRef cf_display_name = nullptr;
+    if (deck_link->GetDisplayName(&cf_display_name) == S_OK && cf_display_name) {
+        result = cf_to_std(cf_display_name);
+        CFRelease(cf_display_name);
     }
-    return result;
-#elif defined(_WIN32)
-    std::string result = "Unknown Device";
-    BSTR bstr_name = nullptr;
-    if (deck_link->GetModelName(&bstr_name) == S_OK && bstr_name) {
-        int len = WideCharToMultiByte(CP_UTF8, 0, bstr_name, -1, nullptr, 0, nullptr, nullptr);
-        if (len > 0) {
-            std::string tmp(len - 1, '\0');
-            WideCharToMultiByte(CP_UTF8, 0, bstr_name, -1, &tmp[0], len, nullptr, nullptr);
-            result = tmp;
+    if (result.empty()) {
+        CFStringRef cf_model_name = nullptr;
+        if (deck_link->GetModelName(&cf_model_name) == S_OK && cf_model_name) {
+            result = cf_to_std(cf_model_name);
+            CFRelease(cf_model_name);
         }
-        SysFreeString(bstr_name);
     }
-    return result;
+    return result.empty() ? "Unknown Device" : result;
+#elif defined(_WIN32)
+    auto bstr_to_std = [](BSTR bstr) -> std::string {
+        if (!bstr)
+            return {};
+        int len = WideCharToMultiByte(CP_UTF8, 0, bstr, -1, nullptr, 0, nullptr, nullptr);
+        if (len <= 0)
+            return {};
+        std::string tmp(len - 1, '\0');
+        WideCharToMultiByte(CP_UTF8, 0, bstr, -1, &tmp[0], len, nullptr, nullptr);
+        return tmp;
+    };
+    std::string result;
+    BSTR bstr_display_name = nullptr;
+    if (deck_link->GetDisplayName(&bstr_display_name) == S_OK && bstr_display_name) {
+        result = bstr_to_std(bstr_display_name);
+        SysFreeString(bstr_display_name);
+    }
+    if (result.empty()) {
+        BSTR bstr_model_name = nullptr;
+        if (deck_link->GetModelName(&bstr_model_name) == S_OK && bstr_model_name) {
+            result = bstr_to_std(bstr_model_name);
+            SysFreeString(bstr_model_name);
+        }
+    }
+    return result.empty() ? "Unknown Device" : result;
 #else
-    std::string result = "Unknown Device";
-    const char* name_str = nullptr;
-    if (deck_link->GetModelName(&name_str) == S_OK && name_str) {
-        result = name_str;
-        free((void*)name_str);
+    std::string result;
+    const char* display_name_str = nullptr;
+    if (deck_link->GetDisplayName(&display_name_str) == S_OK && display_name_str) {
+        result = display_name_str;
+        free((void*)display_name_str);
     }
-    return result;
+    if (result.empty()) {
+        const char* model_name_str = nullptr;
+        if (deck_link->GetModelName(&model_name_str) == S_OK && model_name_str) {
+            result = model_name_str;
+            free((void*)model_name_str);
+        }
+    }
+    return result.empty() ? "Unknown Device" : result;
 #endif
 }
 
@@ -721,7 +763,7 @@ class jit_decklink_send_tilde : public object<jit_decklink_send_tilde>, public v
         }
         IDeckLink* deck_link = nullptr;
         while (iterator->Next(&deck_link) == S_OK) {
-            names.push_back(get_model_name(deck_link));
+            names.push_back(get_device_name(deck_link));
             deck_link->Release();
         }
         iterator->Release();
@@ -947,7 +989,7 @@ class jit_decklink_send_tilde : public object<jit_decklink_send_tilde>, public v
             return;
         }
         m_deck_link = found;
-        m_device_name = get_model_name(m_deck_link);
+        m_device_name = get_device_name(m_deck_link);
 
 #if defined(__APPLE__)
         HRESULT qi = m_deck_link->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deck_link_output);
