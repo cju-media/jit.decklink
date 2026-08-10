@@ -117,6 +117,14 @@ if (APPLE AND NOT "${PROJECT_NAME}" MATCHES "_test")
 			endif()
 		endif()
 		add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+			# LOCAL PATCH: strip extended attributes before signing.
+			# This source tree lives under an iCloud-synced folder, which stamps
+			# com.apple.FinderInfo / com.apple.fileprovider onto the freshly
+			# built bundle. codesign rejects those outright ("resource fork,
+			# Finder information, or similar detritus not allowed") and, because
+			# its stderr is sent to /dev/null below, the build fails with a bare
+			# "Error 1" and no explanation. Re-apply when updating max-sdk-base.
+			COMMAND xattr -cr $<TARGET_BUNDLE_DIR:${PROJECT_NAME}>
 			COMMAND codesign -s ${MAX_SDK_CODESIGN_IDENTITY} -f --deep $<TARGET_BUNDLE_DIR:${PROJECT_NAME}> 2>/dev/null
 		)
 	endif()

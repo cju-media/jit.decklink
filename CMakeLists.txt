@@ -42,7 +42,47 @@ set("${_jit_decklink_folder_name}_EXTERN_OUTPUT_NAME" "jit.decklink.send~"
     CACHE STRING "The name to give to the external output file/directory")
 
 # Pre-target setup
-set(C74_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/externals")
+# ---------------------------------------------------------------------------
+# Max package layout
+#
+# Everything a Max package needs is assembled under build/jit.decklink/, so that one
+# directory *is* the package and can be symlinked straight into
+# ~/Documents/Max 9/Packages/. Previously the externals landed in a build
+# subfolder and the package was wired into Max by hand, which meant a stale
+# .mxo was always one forgotten copy away.
+#
+# Link it into Max with:
+#   ln -s "$(pwd)/build/jit.decklink" ~/Documents/"Max 9"/Packages/jit.decklink
+# ---------------------------------------------------------------------------
+set(C74_PACKAGE_NAME "jit.decklink")
+set(C74_PACKAGE_DIR  "${CMAKE_BINARY_DIR}/${C74_PACKAGE_NAME}")
+set(C74_EXTERNALS_DIR "${C74_PACKAGE_DIR}/externals")
+
+file(MAKE_DIRECTORY "${C74_EXTERNALS_DIR}")
+
+# Symlink rather than copy the authored folders: a copy goes stale the moment
+# a patcher is edited, and these are the files most likely to be edited while
+# Max is open.
+foreach(_authored patchers docs extras help media init)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_authored}")
+        file(CREATE_LINK
+            "${CMAKE_CURRENT_SOURCE_DIR}/${_authored}"
+            "${C74_PACKAGE_DIR}/${_authored}"
+            SYMBOLIC)
+    endif()
+endforeach()
+
+file(WRITE "${C74_PACKAGE_DIR}/package-info.json"
+"{
+\t\"name\": \"jit.decklink\",
+\t\"version\": \"0.1.0\",
+\t\"author\": \"Cameron Johnston\",
+\t\"description\": \"Send Jitter video and MC audio to Blackmagic DeckLink devices.\",
+\t\"tags\": ["jitter", "video", "audio", "decklink", "blackmagic"]
+}
+")
+
+set(C74_LIBRARY_OUTPUT_DIRECTORY "${C74_EXTERNALS_DIR}")
 include(${MIN_API_DIR}/script/min-pretarget.cmake)
 
 # Source files
