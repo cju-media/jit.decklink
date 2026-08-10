@@ -73,32 +73,45 @@ A few things worth knowing:
 ## Build
 
 ```bash
-mkdir -p build && cd build
-cmake ..
-cmake --build .
+cmake -B build
+cmake --build build
 ```
 
-The resulting external is written to `build/externals/jit.decklink.send~.mxo`.
-Copy it to your Max package/externals folder to use it.
-
-### Troubleshooting: codesign fails under iCloud Drive
-
-If your checkout lives inside an iCloud-synced folder (e.g. under
-`~/Documents` with "Desktop & Documents Folders" sync enabled), the build's
-ad-hoc code-signing step can fail with an error like:
-
-```
-resource fork, Finder information, or similar detritus not allowed
-```
-
-This is iCloud tagging new build directories with Finder/file-provider
-extended attributes that `codesign` refuses to sign over -- it's not a
-project code issue. Work around it either by building outside the
-iCloud-synced folder, or by skipping the sign step:
+This assembles a complete Max package at `build/jit.decklink/` -- an
+`externals/` folder with the built `.mxo`, plus a generated
+`package-info.json`. That directory *is* the package, so installing it is one
+symlink:
 
 ```bash
-cmake -DMAX_SDK_CODESIGN_EXTERNS=OFF ..
+ln -s "$(pwd)/build/jit.decklink" ~/Documents/"Max 9"/Packages/jit.decklink
 ```
+
+`build` is a symlink to `build.nosync`, which is where the output actually
+lands (see "Troubleshooting: iCloud Drive" below for why). **To wipe the
+build:** `rm -rf build.nosync && mkdir build.nosync`, not just
+`rm -rf build.nosync` alone -- that leaves `build` a dangling symlink, and
+CMake's directory bootstrap does not follow a dangling symlink to create what
+it points at, so the next `cmake -B build` fails with an unrelated-looking
+`pkgRedirects` error.
+
+### Troubleshooting: iCloud Drive
+
+If your checkout lives inside an iCloud-synced folder (e.g. under
+`~/Documents` with "Desktop & Documents Folders" sync enabled), two separate
+problems show up, both already worked around by this repo:
+
+- **codesign refuses to sign the bundle** (`resource fork, Finder
+  information, or similar detritus not allowed`) because iCloud tags fresh
+  build directories with Finder/file-provider extended attributes. Fixed with
+  a local patch to `min-api/max-sdk-base/script/max-posttarget.cmake` that
+  strips them (`xattr -cr`) immediately before signing -- re-apply if you
+  update `min-api`.
+- **Empty duplicate directories appear during every build**
+  (`CMakeFiles 2`, `jit 2.decklink`, ...) because iCloud's file provider races
+  with CMake's rapid directory create/rename/delete and keeps both copies.
+  Fixed by building into `build.nosync/` -- iCloud skips anything ending in
+  `.nosync` -- with `build` kept as a symlink to it so the usual commands
+  still work.
 
 ### Architecture
 
