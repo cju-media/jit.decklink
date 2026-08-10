@@ -1,4 +1,10 @@
 build/
+# The real build directory. iCloud Drive syncs ~/Documents, and its file
+# provider races with CMake's rapid directory create/rename/delete, resolving
+# the conflict by leaving empty duplicates ("CMakeFiles 2", "jit 2.airplay").
+# iCloud skips anything whose name ends in .nosync, so the real directory is
+# build.nosync/ and `build` is a symlink to it - `cmake -B build` still works.
+build.nosync/
 externals/
 .DS_Store
 *.o
